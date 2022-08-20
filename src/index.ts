@@ -20,7 +20,8 @@ import {
     Vector3,
     BufferGeometry,
     MeshStandardMaterial2,
-    Mesh
+    Mesh,
+    AssetImporter
 } from "webgi";
 
 import * as THREE from 'three';
@@ -32,11 +33,13 @@ import "./styles.css";
 async function setupViewer(){
 
     // scene buttons
-    const btn1 = document.querySelector('.btn1')
-    const btn2 = document.querySelector('.btn2')
-    const btn3 = document.querySelector('.btn3')
-    const btn4 = document.querySelector('.btn4')
-    const btnReset = document.querySelector('.resetBtn')
+    const btn1 = document.querySelector('.btn1') as HTMLButtonElement
+    const btn2 = document.querySelector('.btn2') as HTMLButtonElement
+    const btn3 = document.querySelector('.btn3') as HTMLButtonElement
+    const btn4 = document.querySelector('.btn4') as HTMLButtonElement
+    const btnReset = document.querySelector('.resetBtn') as HTMLButtonElement
+    const loader = document.querySelector('.loader')! as HTMLDivElement
+    const container = document.querySelector('.container') as HTMLDivElement
 
     const viewerContainer = document.getElementById('webgi-canvas')
     gsap.registerPlugin(ScrollTrigger)
@@ -76,12 +79,55 @@ async function setupViewer(){
     // or use this to add all main ones at once.
     await addBasePlugins(viewer)
 
-    viewer.renderer.refreshPipeline()
+    const importer = manager.importer as AssetImporter
+
+    const setUpScrollAnimation = () => {
+        document.body.style.overflowY = "scroll"
+
+        const tl = gsap.timeline()
+
+        // view-2
+        tl.to(position, {x: -7.5, y: 2, z: 7.5, scrollTrigger: { trigger: ".view-2",  start: "top bottom", end: "top top", scrub: true, immediateRender: false }, onUpdate, onComplete(){}})
+          .to(watch.rotation, {y: Math.PI / 2, scrollTrigger: { trigger: ".view-2",  start: "top bottom", end: "top top", scrub: true, immediateRender: false }, onComplete(){}})
+          .to(target, {x: 0, y: .4, z: 2.9, scrollTrigger: { trigger: ".view-2",  start: "top bottom", end: "top top", scrub: true, immediateRender: false }, onUpdate})
+        
+        // view-3
+          .to(watch.rotation, {y: Math.PI * 1.5, scrollTrigger: { trigger: ".view-3",  start: "top bottom", end: "top top", scrub: true, immediateRender: false }, onComplete(){}})
+          .to(target, {x: 0, y: -.51, z: -4, scrollTrigger: { trigger: ".view-3",  start: "top bottom", end: "top top", scrub: true, immediateRender: false }, onUpdate})
+    }
+
+    const reset = () => {
+        gsapTL
+            .to(position, {x: -7.5, y: 2, z: 7.5, duration: 4, onUpdate})
+            .to(target, {x: 0, y: -.51, z: -4, duration: 2, onUpdate, onComplete: setUpScrollAnimation}, '-=2')
+    }
+
+    importer.addEventListener("onStart", (ev) => {
+        onUpdate()
+    })
+    
+    importer.addEventListener("onProgress", (ev) => {
+        const progressRatio = (ev.loaded / ev.total)
+        document.querySelector('.progress')?.setAttribute('style',`transform: scaleX(${progressRatio})`)
+        
+        if(progressRatio > .9){
+            gsapTL
+                .to(loader, {opacity:0, duration: 1, onUpdate, onComplete(){
+                    loader.style.display = "none"
+                }})
+                .to(container, {opacity:1, duration: 2, onUpdate, onComplete(){
+                    loader.style.display = "block"
+                }})
+        }
+    })
+
+    importer.addEventListener("onLoad", (ev) => {
+        reset()
+    })
 
     await manager.addFromPath("./assets/classic-watch.glb")
     const watch = viewer.scene.findObjectsByName('Scene')[0] as any as Mesh<BufferGeometry,MeshStandardMaterial2>
 
-    console.log(watch, " <<<")
     const camViews = viewer.getPlugin(CameraViewPlugin)
     // await viewer.scene.setEnvironment(
     //     await manager.importer!.importSinglePath<ITexture>(
@@ -146,32 +192,11 @@ async function setupViewer(){
         }
     })
 
-    const reset = () => {
-        gsapTL
-            .to(position, {x: -7.5, y: 2, z: 7.5, duration: 4, onUpdate})
-            .to(target, {x: 0, y: -.51, z: -4, duration: 2, onUpdate, onComplete: setUpScrollAnimation}, '-=2')
-    }
-
-    const setUpScrollAnimation = () => {
-        document.body.style.overflowY = "scroll"
-
-        const tl = gsap.timeline()
-
-        // view-2
-        tl.to(position, {x: -7.5, y: 2, z: 7.5, scrollTrigger: { trigger: ".view-2",  start: "top bottom", end: "top top", scrub: true, immediateRender: false }, onUpdate, onComplete(){}})
-          .to(watch.rotation, {y: Math.PI / 2, scrollTrigger: { trigger: ".view-2",  start: "top bottom", end: "top top", scrub: true, immediateRender: false }, onComplete(){}})
-          .to(target, {x: 0, y: .4, z: 2.9, scrollTrigger: { trigger: ".view-2",  start: "top bottom", end: "top top", scrub: true, immediateRender: false }, onUpdate})
-        
-        // view-3
-          .to(watch.rotation, {y: Math.PI * 1.5, scrollTrigger: { trigger: ".view-3",  start: "top bottom", end: "top top", scrub: true, immediateRender: false }, onComplete(){}})
-          .to(target, {x: 0, y: -.51, z: -4, scrollTrigger: { trigger: ".view-3",  start: "top bottom", end: "top top", scrub: true, immediateRender: false }, onUpdate})
-    }
-
-    reset()
-
     btnReset?.addEventListener('click', ()=>{
         reset()
     })
+
+    viewer.renderer.refreshPipeline()
 
     // viewerContainer?.focus()
 
