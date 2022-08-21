@@ -21,7 +21,8 @@ import {
     BufferGeometry,
     MeshStandardMaterial2,
     Mesh,
-    AssetImporter
+    AssetImporter,
+    GLTFLoader2
 } from "webgi";
 
 import * as THREE from 'three';

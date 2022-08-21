@@ -91,8 +91,8 @@ article {
   transform: scaleX(0);
   transition: transform 1s;
   transform-origin: left;
-  height: 20px;
-  background-color: aqua;
+  height: 5px;
+  background-color: #9a9a9a;
 }
 
 .container{
